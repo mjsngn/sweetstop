@@ -1,2 +1,95 @@
+# ==========================================
+# 1. ENVIRONMENT VARIABLES (CRITICAL SECURITY)
+# ==========================================
+# Ignores all .env files to protect API keys and DB passwords
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.*.local
+
+# Exception: You CAN safely commit an example file to show others what variables are needed
+!.env.example
+
+# ==========================================
+# 2. DEPENDENCIES & BUILDS
+# ==========================================
 node_modules/
-backend/.env
+jspm_packages/
+dist/
+build/
+out/
+.next/
+coverage/
+
+# ==========================================
+# 3. SECRETS & KEYS
+# ==========================================
+# Never commit private keys, certificates, or SSH keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+.npmrc
+.yarnrc
+
+# ==========================================
+# 4. DATABASE & LOCAL DATA
+# ==========================================
+# In case you have local database dumps or sqlite files
+*.sqlite
+*.sqlite3
+*.db
+*.sql
+dump/
+backend/data/
+
+# ==========================================
+# 5. LOGS & DEBUGGING
+# ==========================================
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==========================================
+# 6. OS & SYSTEM FILES
+# ==========================================
+# Mac
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ==========================================
+# 7. EDITOR & IDE FILES
+# ==========================================
+# VS Code (unless you specifically want to share workspace settings)
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# JetBrains (WebStorm, IntelliJ)
+.idea/
+*.iml
+*.iws
+
+# ==========================================
+# 8. MISCELLANEOUS
+# ==========================================
+# Temporary folders
+tmp/
+temp/
+.cache/
