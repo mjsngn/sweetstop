@@ -1,0 +1,74 @@
+[
+  {
+    "id": 1,
+    "name": "Fudgy Chocolate Brownies",
+    "category": "Brownies",
+    "price": 150,
+    "unit": "box of 6",
+    "emoji": "🍫",
+    "description": "Rich, fudgy, and packed with chocolate chips. Baked fresh daily."
+  },
+  {
+    "id": 2,
+    "name": "Salted Caramel Brownies",
+    "category": "Brownies",
+    "price": 170,
+    "unit": "box of 6",
+    "emoji": "🧂",
+    "description": "Our classic fudge brownie swirled with sweet-salty caramel."
+  },
+  {
+    "id": 3,
+    "name": "Choco Chip Cookies",
+    "category": "Cookies",
+    "price": 120,
+    "unit": "box of 8",
+    "emoji": "🍪",
+    "description": "Crisp edges, soft centers, loaded with chocolate chips."
+  },
+  {
+    "id": 4,
+    "name": "Oatmeal Raisin Cookies",
+    "category": "Cookies",
+    "price": 110,
+    "unit": "box of 8",
+    "emoji": "🍪",
+    "description": "Chewy oatmeal cookies with plump raisins and a hint of cinnamon."
+  },
+  {
+    "id": 5,
+    "name": "Yema Cake",
+    "category": "Cakes",
+    "price": 480,
+    "unit": "whole cake (8\")",
+    "emoji": "🍰",
+    "description": "Soft chiffon cake blanketed in creamy, caramelized yema custard."
+  },
+  {
+    "id": 6,
+    "name": "Ube Cheese Cake",
+    "category": "Cakes",
+    "price": 520,
+    "unit": "whole cake (8\")",
+    "emoji": "💜",
+    "description": "Purple yam chiffon cake with a cream cheese frosting and cheese bits."
+  },
+  {
+    "id": 7,
+    "name": "Leche Flan",
+    "category": "Custards",
+    "price": 200,
+    "unit": "small tub",
+    "emoji": "🍮",
+    "description": "Silky steamed egg custard topped with a smooth caramel glaze."
+  },
+  {
+    "id": 8,
+    "name": "Polvoron",
+    "category": "Treats",
+    "price": 90,
+    "unit": "pack of 10",
+    "emoji": "🥛",
+    "description": "Melt-in-your-mouth toasted milk shortbread, a Filipino favorite."
+  }
+]

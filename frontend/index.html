@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sweet Stop — Home-baked Brownies, Cookies &amp; Cakes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="logo" href="#top">Sweet Stop</a>
+      <nav class="main-nav" id="mainNav">
+        <a href="#menu">Menu</a>
+        <a href="#track">Track order</a>
+      </nav>
+      <div class="header-actions">
+      <button class="account-btn" id="accountBtn">Log in</button>
+      <button class="cart-btn" id="cartBtn" aria-label="Open cart">
+        🧺 <span id="cartCount">0</span>
+      </button>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero" id="top">
+      <div class="wrap hero-inner">
+        <div class="hero-copy">
+          <span class="stamp">baked fresh, every morning</span>
+          <h1>Brownies, cookies &amp; cakes worth saving room for.</h1>
+          <p class="hero-sub">
+            Sweet Stop is a small home bakery serving fudgy brownies, loaded
+            cookies, and Filipino favorites like yema cake and leche flan —
+            made in small batches and delivered to your door.
+          </p>
+          <div class="hero-actions">
+            <a href="#menu" class="btn btn-primary">See the menu</a>
+            <a href="#track" class="btn btn-ghost">Track an order</a>
+          </div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <div class="box-tile t1">🍫</div>
+          <div class="box-tile t2">🍪</div>
+          <div class="box-tile t3">🍰</div>
+          <div class="box-tile t4">🍮</div>
+          <div class="box-tile t5">💜</div>
+          <div class="box-tile t6">🥛</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MENU -->
+    <section class="menu" id="menu">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Our menu</h2>
+          <p>Everything is made to order — pick a category to browse.</p>
+        </div>
+
+        <div class="search-box">
+          <input type="search" id="searchInput" placeholder="Search desserts… try &quot;choco&quot; or &quot;ube&quot;" aria-label="Search desserts" />
+        </div>
+
+        <div class="filters" id="filters">
+          <button class="filter-chip is-active" data-category="all">All</button>
+          <button class="filter-chip" data-category="Brownies">Brownies</button>
+          <button class="filter-chip" data-category="Cookies">Cookies</button>
+          <button class="filter-chip" data-category="Cakes">Cakes</button>
+          <button class="filter-chip" data-category="Custards">Custards</button>
+          <button class="filter-chip" data-category="Treats">Treats</button>
+        </div>
+
+        <div class="product-grid" id="productGrid">
+          <!-- product cards injected by script.js -->
+        </div>
+      </div>
+    </section>
+
+    <!-- TRACK ORDER -->
+    <section class="track" id="track">
+      <div class="wrap track-inner">
+        <div>
+          <h2>Already ordered?</h2>
+          <p>Enter your order number to check how it's coming along.</p>
+        </div>
+        <form id="trackForm" class="track-form">
+          <input type="number" id="trackOrderId" placeholder="e.g. 1001" required />
+          <button type="submit" class="btn btn-primary">Check status</button>
+        </form>
+      </div>
+      <div class="wrap">
+        <div id="trackResult"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <div>
+        <p class="logo">Sweet Stop</p>
+        <p>Home-baked treats, made fresh to order.</p>
+      </div>
+      <div>
+        <p><strong>Hours</strong><br/>Tue–Sun, 9am–6pm</p>
+      </div>
+      <div>
+        <p><strong>Order by</strong><br/><p>Phone, this website, or DM us</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- CART DRAWER -->
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+  <aside class="cart-drawer" id="cartDrawer">
+    <div class="drawer-head">
+      <h3>Your basket</h3>
+      <button id="closeCart" aria-label="Close cart">✕</button>
+    </div>
+    <div class="drawer-items" id="drawerItems"></div>
+    <div class="drawer-footer">
+      <div class="drawer-total">
+        <span>Total</span>
+        <strong id="drawerTotal">₱0</strong>
+      </div>
+      <button class="btn btn-primary btn-block" id="checkoutBtn">Checkout</button>
+    </div>
+  </aside>
+
+  <!-- CHECKOUT MODAL -->
+  <div class="modal-overlay" id="checkoutOverlay">
+    <div class="modal">
+      <button class="modal-close" id="closeCheckout" aria-label="Close">✕</button>
+      <div id="checkoutContent">
+        <div id="checkoutFormWrap">
+          <h3>Delivery details</h3>
+          <p class="login-hint" id="loginHint">Have an account?
+            <button type="button" class="link-btn" id="hintLogin">Log in</button>
+            to use your saved addresses and keep track of your orders.</p>
+          <form id="checkoutForm">
+            <label>Full name
+              <input type="text" name="customerName" required />
+            </label>
+            <label>Contact number
+              <input type="tel" name="contactNumber" required />
+            </label>
+            <label id="savedAddressWrap" class="is-hidden">Saved addresses
+              <select id="savedAddress"></select>
+            </label>
+            <label>Delivery address
+              <textarea name="address" id="addressField" rows="2" required></textarea>
+            </label>
+            <div id="saveAddressWrap" class="is-hidden">
+              <label class="check">
+                <input type="checkbox" id="saveAddress" /> Save this address for next time
+              </label>
+              <input type="text" id="addressLabel" placeholder="Label, e.g. Home or Office" maxlength="40" />
+            </div>
+            <label>Delivery date
+              <input type="date" name="deliveryDate" id="deliveryDate" required />
+              <span class="field-hint" id="dateHint">Everything is baked to order, so please allow at least 1 day.</span>
+            </label>
+            <label><span>Order notes <span class="optional">(optional)</span></span>
+              <textarea name="notes" rows="2" maxlength="300" placeholder="e.g. &quot;Happy Birthday Ana!&quot; on the cake, no nuts, extra box…"></textarea>
+            </label>
+            <label>Payment method
+              <select name="paymentMethod">
+                <option>Cash on Delivery</option>
+                <option>GCash</option>
+                <option>Bank Transfer</option>
+              </select>
+            </label>
+            <div class="modal-summary" id="modalSummary"></div>
+            <p class="form-error" id="checkoutError" role="alert"></p>
+            <button type="submit" class="btn btn-primary btn-block">Place order</button>
+          </form>
+        </div>
+        <div id="checkoutDone" class="is-hidden"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCOUNT MODAL (log in / create account / my account) -->
+  <div class="modal-overlay" id="accountOverlay">
+    <div class="modal" id="accountModal">
+      <button class="modal-close" id="closeAccount" aria-label="Close">✕</button>
+      <div id="accountContent"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    const navToggle = document.getElementById('navToggle');
+    const mainNav = document.getElementById('mainNav');
+    navToggle.addEventListener('click', () => {
+      const open = mainNav.classList.toggle('is-open');
+      navToggle.setAttribute('aria-expanded', open);
+    });
+    mainNav.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => {
+        mainNav.classList.remove('is-open');
+        navToggle.setAttribute('aria-expanded', 'false');
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sweet Stop — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<style>
+  .admin-wrap { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+  .admin-login { max-width: 360px; margin: 100px auto; text-align: center; }
+  .admin-login input {
+    border: 2px solid var(--cocoa); border-radius: 12px; padding: 10px 14px;
+    width: 100%; margin: 14px 0; font-family: var(--font-body); font-size: 1rem;
+  }
+  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); font-size: 0.9rem; }
+  th { font-weight: 700; }
+  select { border: 2px solid var(--cocoa); border-radius: 8px; padding: 4px 8px; font-family: var(--font-body); }
+  .hidden { display: none; }
+  .admin-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  .admin-login form { text-align: left; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a class="logo" href="index.html">Sweet Stop</a>
+    <nav class="main-nav"><a href="index.html">Back to store</a></nav>
+  </div>
+</header>
+
+<div id="loginView" class="admin-login">
+  <h2>Admin login</h2>
+  <p>Sign in with the admin account to view and manage orders.</p>
+  <form id="loginForm">
+    <input type="email" id="adminEmail" placeholder="Admin email" autocomplete="username" required />
+    <input type="password" id="adminPassword" placeholder="Password" autocomplete="current-password" required />
+    <p class="form-error" id="loginError" role="alert"></p>
+    <button type="submit" class="btn btn-primary btn-block">Log in</button>
+  </form>
+</div>
+
+<div id="ordersView" class="admin-wrap hidden">
+  <div class="admin-top">
+    <div>
+      <h2>Incoming orders</h2>
+      <p>Update a status to move an order along.</p>
+    </div>
+    <button class="btn btn-ghost" id="logoutBtn">Log out</button>
+  </div>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Customer</th><th>Items</th><th>Deliver on</th><th>Notes</th><th>Total</th><th>Payment</th><th>Status</th></tr>
+    </thead>
+    <tbody id="ordersBody"></tbody>
+  </table>
+</div>
+
+<script>
+const API = "/api";
+const TOKEN_KEY = "sweetstop_admin_token";
+let adminToken = null;
+
+const money = (n) => `₱${Number(n).toLocaleString("en-PH")}`;
+const STATUSES = ["Pending", "Confirmed", "Baking", "Out for Delivery", "Completed", "Cancelled"];
+
+function escapeHtml(str) {
+  return String(str ?? "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+function formatDate(iso) {
+  if (!iso) return "—";
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
+}
+
+// The admin token lives in sessionStorage, so closing the tab logs you out.
+function saveToken(t) { try { sessionStorage.setItem(TOKEN_KEY, t); } catch (_) {} }
+function loadToken() { try { return sessionStorage.getItem(TOKEN_KEY); } catch (_) { return null; } }
+function forgetToken() { try { sessionStorage.removeItem(TOKEN_KEY); } catch (_) {} }
+
+async function request(path, options = {}) {
+  let res;
+  try {
+    res = await fetch(`${API}${path}`, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
+      },
+    });
+  } catch (_) {
+    throw new Error("Can't reach the server. Make sure it is running (npm start in the backend folder).");
+  }
+  let data = null;
+  try { data = await res.json(); } catch (_) {}
+  if (!res.ok) {
+    const err = new Error((data && data.error) || "Something went wrong.");
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+function showLogin() {
+  adminToken = null;
+  forgetToken();
+  document.getElementById("ordersView").classList.add("hidden");
+  document.getElementById("loginView").classList.remove("hidden");
+}
+
+async function showOrders() {
+  const orders = await request("/admin/orders");
+  document.getElementById("loginView").classList.add("hidden");
+  document.getElementById("ordersView").classList.remove("hidden");
+  renderOrders(orders);
+}
+
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById("loginError");
+  errorEl.textContent = "";
+  try {
+    const data = await request("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({
+        email: document.getElementById("adminEmail").value,
+        password: document.getElementById("adminPassword").value,
+      }),
+    });
+    if (data.user.role !== "admin") {
+      errorEl.textContent = "That account is not an admin account.";
+      return;
+    }
+    adminToken = data.token;
+    saveToken(adminToken);
+    document.getElementById("adminPassword").value = "";
+    await showOrders();
+  } catch (err) {
+    errorEl.textContent = err.message;
+  }
+});
+
+document.getElementById("logoutBtn").addEventListener("click", showLogin);
+
+function renderOrders(orders) {
+  const body = document.getElementById("ordersBody");
+  if (orders.length === 0) {
+    body.innerHTML = `<tr><td colspan="8">No orders yet.</td></tr>`;
+    return;
+  }
+  body.innerHTML = orders
+    .slice()
+    .reverse()
+    .map(
+      (o) => `
+    <tr>
+      <td>#${o.id}</td>
+      <td>${escapeHtml(o.customerName)}<br/><small>${escapeHtml(o.contactNumber)}</small><br/><small>${escapeHtml(o.address)}</small></td>
+      <td>${o.items.map((i) => `${i.quantity}× ${escapeHtml(i.name)}`).join("<br/>")}</td>
+      <td><strong>${formatDate(o.deliveryDate)}</strong></td>
+      <td>${o.notes ? escapeHtml(o.notes) : "—"}</td>
+      <td>${money(o.total)}</td>
+      <td>${escapeHtml(o.paymentMethod)}</td>
+      <td>
+        <select data-id="${o.id}">
+          ${STATUSES.map((s) => `<option ${s === o.status ? "selected" : ""}>${s}</option>`).join("")}
+        </select>
+      </td>
+    </tr>
+  `
+    )
+    .join("");
+
+  body.querySelectorAll("select").forEach((sel) => {
+    sel.addEventListener("change", async () => {
+      try {
+        await request(`/admin/orders/${sel.dataset.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ status: sel.value }),
+        });
+      } catch (err) {
+        if (err.status === 401 || err.status === 403) return showLogin();
+        alert(err.message);
+      }
+    });
+  });
+}
+
+// If the tab already has a valid admin session, skip the login screen.
+(async function init() {
+  const saved = loadToken();
+  if (!saved) return;
+  adminToken = saved;
+  try {
+    await showOrders();
+  } catch (_) {
+    showLogin();
+  }
+})();
+</script>
+
+</body>
+</html>
