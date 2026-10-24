@@ -1,7 +1,7 @@
 // Sweet Stop — frontend logic. Talks to the backend REST API only through
 // fetch(); no framework needed for a site this size.
 
-const API = "/api";
+const API = "https://sweetstop-9krl.onrender.com/api";
 
 const $ = (id) => document.getElementById(id);
 
@@ -12,7 +12,8 @@ function storageSet(k, val) { try { localStorage.setItem(k, val); } catch (_) { 
 function storageRemove(k) { try { localStorage.removeItem(k); } catch (_) { /* private mode */ } }
 
 let authToken = storageGet(TOKEN_KEY);
-let currentUser = null; // { id, name, email, phone, role, addresses: [...] } when logged in
+let currentUser = null;
+let resetToken = new URLSearchParams(location.search).get("reset") || null;
 
 // Talks to the backend. Adds the login token automatically and turns
 // failures into readable error messages.
@@ -502,6 +503,76 @@ function handleExpiredLogin() {
 
 function renderAuthForms(box) {
   const isLogin = authMode === "login";
+  const isForgot = authMode === "forgot";
+  const isReset = authMode === "reset";
+
+  if (isForgot) {
+    box.innerHTML = `
+      <h3>Reset your password</h3>
+      <p>Enter your email and we'll send you a reset link.</p>
+      <form id="authForm" class="form-stack">
+        <label>Email
+          <input type="email" name="email" required autocomplete="email" />
+        </label>
+        <p class="form-ok" id="authOk"></p>
+        <p class="form-error" id="authError" role="alert"></p>
+        <button type="submit" class="btn btn-primary btn-block">Send reset link</button>
+      </form>
+      <p style="margin-top:14px;text-align:center">
+        <button class="link-btn" id="backToLogin">Back to log in</button>
+      </p>
+    `;
+    box.querySelector("#backToLogin").addEventListener("click", () => { authMode = "login"; renderAccount(); });
+    $("authForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      $("authError").textContent = "";
+      btn.disabled = true;
+      try {
+        await api("/auth/forgot-password", { method: "POST", body: { email: e.target.email.value } });
+        $("authOk").textContent = "If that email is registered, a reset link is on its way.";
+        e.target.reset();
+      } catch (_) {
+        $("authOk").textContent = "If that email is registered, a reset link is on its way.";
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    return;
+  }
+
+  if (isReset) {
+    box.innerHTML = `
+      <h3>Choose a new password</h3>
+      <form id="authForm" class="form-stack">
+        <label><span>New password <span class="optional">(at least 8 characters)</span></span>
+          <input type="password" name="newPassword" required minlength="8" maxlength="72" autocomplete="new-password" />
+        </label>
+        <p class="form-ok" id="authOk"></p>
+        <p class="form-error" id="authError" role="alert"></p>
+        <button type="submit" class="btn btn-primary btn-block">Set new password</button>
+      </form>
+    `;
+    $("authForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector('button[type="submit"]');
+      $("authError").textContent = "";
+      btn.disabled = true;
+      try {
+        await api("/auth/reset-password", { method: "POST", body: { token: resetToken, newPassword: e.target.newPassword.value } });
+        $("authOk").textContent = "Password updated! You can now log in.";
+        resetToken = null;
+        history.replaceState(null, "", location.pathname);
+        setTimeout(() => { authMode = "login"; renderAccount(); }, 2000);
+      } catch (err) {
+        $("authError").textContent = err.message;
+        btn.disabled = false;
+      }
+    });
+    return;
+  }
+
+  const isLogin = authMode === "login";
   box.innerHTML = `
     <h3>${isLogin ? "Welcome back" : "Create your account"}</h3>
     <p>Save your delivery addresses and keep all your orders in one place.</p>
@@ -527,6 +598,7 @@ function renderAuthForms(box) {
       </label>
       <p class="form-error" id="authError" role="alert"></p>
       <button type="submit" class="btn btn-primary btn-block">${isLogin ? "Log in" : "Create account"}</button>
+      ${isLogin ? `<p style="margin-top:10px;text-align:center"><button type="button" class="link-btn" id="forgotBtn">Forgot password?</button></p>` : ""}
     </form>
   `;
 
@@ -536,6 +608,11 @@ function renderAuthForms(box) {
       renderAccount();
     })
   );
+
+  if (isLogin) {
+    const forgotBtn = box.querySelector("#forgotBtn");
+    if (forgotBtn) forgotBtn.addEventListener("click", () => { authMode = "forgot"; renderAccount(); });
+  }
 
   const form = $("authForm");
   form.addEventListener("submit", async (e) => {
@@ -771,5 +848,9 @@ document.getElementById("trackForm").addEventListener("submit", async (e) => {
   allProductsCache = await res.json();
   applyFilters();
   renderCart();
-  restoreSession();
+  await restoreSession();
+  if (resetToken) {
+    authMode = "reset";
+    openAccount();
+  }
 })();

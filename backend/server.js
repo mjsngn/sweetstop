@@ -10,6 +10,9 @@ dns.setServers(['8.8.8.8', '8.8.4.4']);
  * password + signed tokens).
  */
 
+const crypto = require("crypto");
+const https = require("https");
+
 require("dotenv").config(); // loads backend/.env if it exists (must run first)
 
 const express = require("express");
@@ -43,6 +46,34 @@ app.use(express.static(path.join(__dirname, "..", "frontend")));
 
 // Used so we can compare passwords in constant-ish time even for unknown emails.
 const DUMMY_HASH = bcrypt.hashSync("not-a-real-password", 10);
+
+// ---------- Brevo email helper ----------
+function sendBrevoEmail({ to, subject, html }) {
+  return new Promise((resolve, reject) => {
+    const body = JSON.stringify({
+      sender: { email: process.env.BREVO_SENDER_EMAIL || "no-reply@sweetstop.local", name: "Sweet Stop" },
+      to: [to],
+      subject,
+      htmlContent: html,
+    });
+    const req = https.request({
+      hostname: "api.brevo.com",
+      path: "/v3/smtp/email",
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "api-key": process.env.BREVO_API_KEY,
+        "Content-Length": Buffer.byteLength(body),
+      },
+    }, (res) => {
+      res.resume();
+      res.on("end", resolve);
+    });
+    req.on("error", reject);
+    req.write(body);
+    req.end();
+  });
+}
 
 // =====================================================================
 // Products
@@ -273,6 +304,52 @@ app.patch("/api/admin/orders/:id", requireAdmin, wrap(async (req, res) => {
   order.status = status;
   await order.save();
   res.json(publicOrder(order));
+}));
+
+// POST /api/auth/forgot-password  { email }
+app.post("/api/auth/forgot-password", wrap(async (req, res) => {
+  const email = v.cleanEmail(req.body.email);
+  // Always respond OK so we don't reveal whether an email is registered.
+  res.json({ ok: true });
+
+  const user = await User.findOne({ email });
+  if (!user) return;
+
+  const token = crypto.randomBytes(32).toString("hex");
+  user.resetToken = token;
+  user.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  await user.save();
+
+  const resetUrl = `https://sweetstop-9krl.onrender.com?reset=${token}`;
+  await sendBrevoEmail({
+    to: { email: user.email, name: user.name },
+    subject: "Reset your Sweet Stop password",
+    html: `<p>Hi ${user.name},</p>
+           <p>Click the link below to reset your password. It expires in 1 hour.</p>
+           <p><a href="${resetUrl}">${resetUrl}</a></p>
+           <p>If you didn't request this, you can ignore this email.</p>`,
+  });
+}));
+
+// POST /api/auth/reset-password  { token, newPassword }
+app.post("/api/auth/reset-password", wrap(async (req, res) => {
+  const { token, newPassword } = req.body;
+  if (!token) return res.status(400).json({ error: "Invalid or expired reset link." });
+
+  const user = await User.findOne({
+    resetToken: token,
+    resetTokenExpiry: { $gt: new Date() },
+  });
+  if (!user) return res.status(400).json({ error: "This reset link has expired or already been used." });
+
+  const pwError = v.validatePassword(newPassword);
+  if (pwError) return res.status(400).json({ error: pwError });
+
+  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  user.resetToken = null;
+  user.resetTokenExpiry = null;
+  await user.save();
+  res.json({ ok: true });
 }));
 
 // =====================================================================

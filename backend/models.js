@@ -20,6 +20,8 @@ const userSchema = new Schema(
     role: { type: String, enum: ["customer", "admin"], default: "customer" },
     phone: { type: String, trim: true, maxlength: 30, default: "" },
     addresses: [addressSchema],
+    resetToken: { type: String, default: null },
+    resetTokenExpiry: { type: Date, default: null },
   },
   { timestamps: true }
 );
