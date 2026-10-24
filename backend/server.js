@@ -66,10 +66,22 @@ function sendBrevoEmail({ to, subject, html }) {
         "Content-Length": Buffer.byteLength(body),
       },
     }, (res) => {
-      res.resume();
-      res.on("end", resolve);
+      let raw = "";
+      res.on("data", (chunk) => { raw += chunk; });
+      res.on("end", () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) {
+          console.log(`[Brevo] Email sent to ${to.email}`);
+          resolve();
+        } else {
+          console.error(`[Brevo] Failed (${res.statusCode}):`, raw);
+          reject(new Error(`Brevo error ${res.statusCode}: ${raw}`));
+        }
+      });
     });
-    req.on("error", reject);
+    req.on("error", (err) => {
+      console.error("[Brevo] Request error:", err.message);
+      reject(err);
+    });
     req.write(body);
     req.end();
   });
@@ -315,32 +327,33 @@ app.post("/api/auth/forgot-password", wrap(async (req, res) => {
   const user = await User.findOne({ email });
   if (!user) return;
 
-  const token = crypto.randomBytes(32).toString("hex");
-  user.resetToken = token;
-  user.resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  const code = String(crypto.randomInt(100000, 999999)); // 6-digit code
+  user.resetToken = code;
+  user.resetTokenExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
   await user.save();
 
-  const resetUrl = `https://sweetstop-9krl.onrender.com?reset=${token}`;
   await sendBrevoEmail({
     to: { email: user.email, name: user.name },
-    subject: "Reset your Sweet Stop password",
+    subject: "Your Sweet Stop password reset code",
     html: `<p>Hi ${user.name},</p>
-           <p>Click the link below to reset your password. It expires in 1 hour.</p>
-           <p><a href="${resetUrl}">${resetUrl}</a></p>
-           <p>If you didn't request this, you can ignore this email.</p>`,
+           <p>Your password reset code is:</p>
+           <h2 style="letter-spacing:8px;font-size:2rem">${code}</h2>
+           <p>It expires in 15 minutes. If you didn't request this, ignore this email.</p>`,
   });
 }));
 
-// POST /api/auth/reset-password  { token, newPassword }
+// POST /api/auth/reset-password  { email, code, newPassword }
 app.post("/api/auth/reset-password", wrap(async (req, res) => {
-  const { token, newPassword } = req.body;
-  if (!token) return res.status(400).json({ error: "Invalid or expired reset link." });
+  const email = v.cleanEmail(req.body.email);
+  const { code, newPassword } = req.body;
+  if (!code || !email) return res.status(400).json({ error: "Invalid request." });
 
   const user = await User.findOne({
-    resetToken: token,
+    email,
+    resetToken: String(code).trim(),
     resetTokenExpiry: { $gt: new Date() },
   });
-  if (!user) return res.status(400).json({ error: "This reset link has expired or already been used." });
+  if (!user) return res.status(400).json({ error: "Incorrect code or it has expired. Please try again." });
 
   const pwError = v.validatePassword(newPassword);
   if (pwError) return res.status(400).json({ error: pwError });
@@ -413,6 +426,8 @@ async function start() {
     process.exit(1);
   }
   console.log("Connected to MongoDB");
+  console.log("[Brevo] sender:", process.env.BREVO_SENDER_EMAIL || "(not set)");
+  console.log("[Brevo] api key:", process.env.BREVO_API_KEY ? "loaded" : "(not set — check .env)");
 
   await seedProducts();
   await seedAdmin();

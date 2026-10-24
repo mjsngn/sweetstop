@@ -1,7 +1,9 @@
 // Sweet Stop — frontend logic. Talks to the backend REST API only through
 // fetch(); no framework needed for a site this size.
 
-const API = "https://sweetstop-9krl.onrender.com/api";
+const API = window.location.hostname === "localhost"
+  ? "/api"
+  : "https://sweetstop-9krl.onrender.com/api";
 
 const $ = (id) => document.getElementById(id);
 
@@ -13,7 +15,7 @@ function storageRemove(k) { try { localStorage.removeItem(k); } catch (_) { /* p
 
 let authToken = storageGet(TOKEN_KEY);
 let currentUser = null;
-let resetToken = new URLSearchParams(location.search).get("reset") || null;
+let resetEmail = null; // holds email between forgot-password steps
 
 // Talks to the backend. Adds the login token automatically and turns
 // failures into readable error messages.
@@ -508,14 +510,14 @@ function renderAuthForms(box) {
   if (isForgot) {
     box.innerHTML = `
       <h3>Reset your password</h3>
-      <p>Enter your email and we'll send you a reset link.</p>
+      <p>Enter your email and we'll send you a 6-digit code.</p>
       <form id="authForm" class="form-stack">
         <label>Email
           <input type="email" name="email" required autocomplete="email" />
         </label>
         <p class="form-ok" id="authOk"></p>
         <p class="form-error" id="authError" role="alert"></p>
-        <button type="submit" class="btn btn-primary btn-block">Send reset link</button>
+        <button type="submit" class="btn btn-primary btn-block">Send code</button>
       </form>
       <p style="margin-top:14px;text-align:center">
         <button class="link-btn" id="backToLogin">Back to log in</button>
@@ -529,12 +531,14 @@ function renderAuthForms(box) {
       btn.disabled = true;
       try {
         await api("/auth/forgot-password", { method: "POST", body: { email: e.target.email.value } });
-        $("authOk").textContent = "If that email is registered, a reset link is on its way.";
-        e.target.reset();
+        resetEmail = e.target.email.value;
+        authMode = "reset";
+        renderAccount();
       } catch (_) {
-        $("authOk").textContent = "If that email is registered, a reset link is on its way.";
-      } finally {
-        btn.disabled = false;
+        // always show the same message to avoid revealing registered emails
+        resetEmail = e.target.email.value;
+        authMode = "reset";
+        renderAccount();
       }
     });
     return;
@@ -542,8 +546,14 @@ function renderAuthForms(box) {
 
   if (isReset) {
     box.innerHTML = `
-      <h3>Choose a new password</h3>
+      <h3>Enter your code</h3>
+      <p>We sent a 6-digit code to <strong>${resetEmail || "your email"}</strong>. It expires in 15 minutes.</p>
       <form id="authForm" class="form-stack">
+        <label>6-digit code
+          <input type="text" name="code" required maxlength="6" inputmode="numeric"
+                 placeholder="123456" autocomplete="one-time-code"
+                 style="letter-spacing:6px;font-size:1.3rem;text-align:center" />
+        </label>
         <label><span>New password <span class="optional">(at least 8 characters)</span></span>
           <input type="password" name="newPassword" required minlength="8" maxlength="72" autocomplete="new-password" />
         </label>
@@ -551,17 +561,24 @@ function renderAuthForms(box) {
         <p class="form-error" id="authError" role="alert"></p>
         <button type="submit" class="btn btn-primary btn-block">Set new password</button>
       </form>
+      <p style="margin-top:14px;text-align:center">
+        <button class="link-btn" id="resendCode">Resend code</button>
+      </p>
     `;
+    box.querySelector("#resendCode").addEventListener("click", () => { authMode = "forgot"; renderAccount(); });
     $("authForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const btn = e.target.querySelector('button[type="submit"]');
       $("authError").textContent = "";
       btn.disabled = true;
       try {
-        await api("/auth/reset-password", { method: "POST", body: { token: resetToken, newPassword: e.target.newPassword.value } });
+        await api("/auth/reset-password", { method: "POST", body: {
+          email: resetEmail,
+          code: e.target.code.value.trim(),
+          newPassword: e.target.newPassword.value,
+        }});
         $("authOk").textContent = "Password updated! You can now log in.";
-        resetToken = null;
-        history.replaceState(null, "", location.pathname);
+        resetEmail = null;
         setTimeout(() => { authMode = "login"; renderAccount(); }, 2000);
       } catch (err) {
         $("authError").textContent = err.message;
@@ -848,8 +865,4 @@ document.getElementById("trackForm").addEventListener("submit", async (e) => {
   applyFilters();
   renderCart();
   await restoreSession();
-  if (resetToken) {
-    authMode = "reset";
-    openAccount();
-  }
 })();
