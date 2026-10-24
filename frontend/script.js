@@ -502,7 +502,6 @@ function handleExpiredLogin() {
 }
 
 function renderAuthForms(box) {
-  const isLogin = authMode === "login";
   const isForgot = authMode === "forgot";
   const isReset = authMode === "reset";
 
